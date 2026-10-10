@@ -15,7 +15,9 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 # Compile Swift sources with VFS overlay and arm64 optimization
+mkdir -p /tmp/clang-cache
 swiftc -O \
+    -module-cache-path /tmp/clang-cache \
     -vfsoverlay "$DIR/vfs.json" \
     -target arm64-apple-macos14.0 \
     -framework AppKit \

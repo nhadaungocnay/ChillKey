@@ -27,12 +27,185 @@ public final class VietnameseEngine {
     
     /// Called when user presses Backspace key.
     public func handleBackspace() {
-        if !currentDisplay.isEmpty {
-            currentDisplay.removeLast()
+        guard !currentDisplay.isEmpty else {
+            reset()
+            return
         }
-        if !currentRaw.isEmpty {
-            currentRaw.removeLast()
+        
+        currentDisplay.removeLast()
+        if currentDisplay.isEmpty {
+            reset()
+        } else {
+            currentRaw = reconstructRaw(from: currentDisplay)
         }
+    }
+    
+    /// Reconstructs the raw keystroke sequence from the currently displayed string.
+    /// This ensures that after Backspace, the engine's internal raw state matches exactly
+    /// what the user sees on screen, preventing deleted characters from resurrecting.
+    public func reconstructRaw(from display: String) -> String {
+        guard !display.isEmpty else { return "" }
+        
+        switch inputMethod {
+        case .vni:
+            return reconstructRawVNI(from: display)
+        case .telex, .simpleTelex:
+            return reconstructRawTelex(from: display)
+        }
+    }
+    
+    private func reconstructRawVNI(from display: String) -> String {
+        var baseChars = [Character]()
+        var vowelMods = [Character]() // 6, 7, 8
+        var toneChar: Character? = nil // 1, 2, 3, 4, 5
+        let hasUoHornPair = hasUoHornDiphthong(in: display)
+        
+        var i = display.startIndex
+        while i < display.endIndex {
+            let ch = display[i]
+            let nextIndex = display.index(after: i)
+            
+            if ch == "đ" || ch == "Đ" {
+                baseChars.append(ch == "Đ" ? "D" : "d")
+                baseChars.append("9")
+                i = nextIndex
+                continue
+            }
+            
+            if let info = Alphabet.getVowelInfo(ch) {
+                let baseCh = info.isUppercase ? Character(String(info.base).uppercased()) : info.base
+                baseChars.append(baseCh)
+                
+                if info.tone != .none && toneChar == nil {
+                    switch info.tone {
+                    case .acute: toneChar = "1"
+                    case .grave: toneChar = "2"
+                    case .hook: toneChar = "3"
+                    case .tilde: toneChar = "4"
+                    case .dot: toneChar = "5"
+                    case .none: break
+                    }
+                }
+                
+                switch info.modification {
+                case .circumflex:
+                    if !vowelMods.contains("6") {
+                        vowelMods.append("6")
+                    }
+                case .horn:
+                    if hasUoHornPair {
+                        if !vowelMods.contains("7") {
+                            vowelMods.append("7")
+                        }
+                    } else {
+                        vowelMods.append("7")
+                    }
+                case .breve:
+                    if !vowelMods.contains("8") {
+                        vowelMods.append("8")
+                    }
+                case .none:
+                    break
+                }
+            } else {
+                baseChars.append(ch)
+            }
+            
+            i = nextIndex
+        }
+        
+        var raw = String(baseChars)
+        for mod in vowelMods {
+            raw.append(mod)
+        }
+        if let tone = toneChar {
+            raw.append(tone)
+        }
+        return raw
+    }
+    
+    private func reconstructRawTelex(from display: String) -> String {
+        var baseChars = [Character]()
+        var vowelMods = [Character]()
+        var toneChar: Character? = nil
+        let hasUoHornPair = hasUoHornDiphthong(in: display)
+        
+        var i = display.startIndex
+        while i < display.endIndex {
+            let ch = display[i]
+            let nextIndex = display.index(after: i)
+            
+            if ch == "đ" || ch == "Đ" {
+                baseChars.append(ch == "Đ" ? "D" : "d")
+                baseChars.append(ch == "Đ" ? "D" : "d")
+                i = nextIndex
+                continue
+            }
+            
+            if let info = Alphabet.getVowelInfo(ch) {
+                let baseCh = info.isUppercase ? Character(String(info.base).uppercased()) : info.base
+                baseChars.append(baseCh)
+                
+                if info.tone != .none && toneChar == nil {
+                    switch info.tone {
+                    case .acute: toneChar = "s"
+                    case .grave: toneChar = "f"
+                    case .hook: toneChar = "r"
+                    case .tilde: toneChar = "x"
+                    case .dot: toneChar = "j"
+                    case .none: break
+                    }
+                }
+                
+                switch info.modification {
+                case .circumflex:
+                    vowelMods.append(info.base)
+                case .horn:
+                    if hasUoHornPair {
+                        if !vowelMods.contains("w") {
+                            vowelMods.append("w")
+                        }
+                    } else {
+                        vowelMods.append("w")
+                    }
+                case .breve:
+                    vowelMods.append("w")
+                case .none:
+                    break
+                }
+            } else {
+                baseChars.append(ch)
+            }
+            
+            i = nextIndex
+        }
+        
+        var raw = String(baseChars)
+        for mod in vowelMods {
+            raw.append(mod)
+        }
+        if let tone = toneChar {
+            raw.append(tone)
+        }
+        return raw
+    }
+    
+    private func hasUoHornDiphthong(in string: String) -> Bool {
+        var prevChar: Character? = nil
+        for ch in string {
+            if let prev = prevChar,
+               let infoPrev = Alphabet.getVowelInfo(prev),
+               let infoCurr = Alphabet.getVowelInfo(ch) {
+                let isU = (infoPrev.base == "u" || infoPrev.base == "U")
+                let isO = (infoCurr.base == "o" || infoCurr.base == "O")
+                let hasHorn = (infoPrev.modification == .horn || infoCurr.modification == .horn)
+                if isU && isO && hasHorn {
+                    return true
+                }
+            }
+            prevChar = ch
+        }
+        return false
     }
     
     /// Main entry point: Processes a new character typed by the user.
@@ -147,20 +320,36 @@ public final class VietnameseEngine {
                 continue
             }
             
-            // Check double horn: uo + w -> ươ (MUST check before single vowel + w)
+            // Check double horn: uo / uô + w -> ươ (MUST check before single vowel + w)
             if lower == "w" && letters.count >= 2 {
-                let lastIdx = letters.count - 1
-                let secondLastIdx = letters.count - 2
-                let lastChar = letters[lastIdx]
-                let secondLastChar = letters[secondLastIdx]
-                let lastLower = Character(String(lastChar).lowercased())
-                let secondLastLower = Character(String(secondLastChar).lowercased())
+                var uoIndex: Int? = nil
+                for i in stride(from: letters.count - 2, through: 0, by: -1) {
+                    let c1 = Character(String(letters[i]).lowercased())
+                    let c2 = Character(String(letters[i + 1]).lowercased())
+                    let isU = (c1 == "u" || c1 == "ư")
+                    let isO = (c2 == "o" || c2 == "ô" || c2 == "ơ")
+                    if isU && isO {
+                        uoIndex = i
+                        break
+                    }
+                }
                 
-                if secondLastLower == "u" && lastLower == "o" {
-                    letters.removeLast()
-                    letters.removeLast()
-                    letters.append(secondLastChar.isUppercase ? "Ư" : "ư")
-                    letters.append(lastChar.isUppercase ? "Ơ" : "ơ")
+                if let idx = uoIndex {
+                    let c1 = Character(String(letters[idx]).lowercased())
+                    let c2 = Character(String(letters[idx + 1]).lowercased())
+                    let u1 = letters[idx].isUppercase
+                    let u2 = letters[idx + 1].isUppercase
+                    
+                    if c1 == "ư" && c2 == "ơ" {
+                        // Undo toggle: ươ + w -> uo + w
+                        letters[idx] = u1 ? "U" : "u"
+                        letters[idx + 1] = u2 ? "O" : "o"
+                        letters.append(char)
+                    } else {
+                        // Transform pair into ươ
+                        letters[idx] = u1 ? "Ư" : "ư"
+                        letters[idx + 1] = u2 ? "Ơ" : "ơ"
+                    }
                     continue
                 }
             }
@@ -214,8 +403,8 @@ public final class VietnameseEngine {
         let inLower = Character(String(incoming).lowercased())
         let isUpper = incoming.isUppercase || lastChar.isUppercase
         
-        // 1. Circumflex: aa -> â, ee -> ê, oo -> ô
-        if lastLower == "a" && inLower == "a" {
+        // 1. Circumflex: aa -> â, ee -> ê, oo -> ô (and ă + a -> â, ơ + o -> ô)
+        if (lastLower == "a" || lastLower == "ă") && inLower == "a" {
             letters.removeLast()
             return isUpper ? "Â" : "â"
         }
@@ -223,7 +412,7 @@ public final class VietnameseEngine {
             letters.removeLast()
             return isUpper ? "Ê" : "ê"
         }
-        if lastLower == "o" && inLower == "o" {
+        if (lastLower == "o" || lastLower == "ơ") && inLower == "o" {
             letters.removeLast()
             return isUpper ? "Ô" : "ô"
         }
@@ -245,12 +434,12 @@ public final class VietnameseEngine {
             return incoming
         }
         
-        // 2. Breve & Horn with 'w': aw -> ă, ow -> ơ, uw -> ư
-        if lastLower == "a" && inLower == "w" {
+        // 2. Breve & Horn with 'w': aw -> ă, ow -> ơ, uw -> ư (and â + w -> ă, ô + w -> ơ)
+        if (lastLower == "a" || lastLower == "â") && inLower == "w" {
             letters.removeLast()
             return isUpper ? "Ă" : "ă"
         }
-        if lastLower == "o" && inLower == "w" {
+        if (lastLower == "o" || lastLower == "ô") && inLower == "w" {
             letters.removeLast()
             return isUpper ? "Ơ" : "ơ"
         }
@@ -348,21 +537,56 @@ public final class VietnameseEngine {
                         handled = true
                     }
                 case "6": // Â, Ê, Ô
-                    for i in stride(from: letters.count - 1, through: 0, by: -1) {
-                        let l = Character(String(letters[i]).lowercased())
-                        let u = letters[i].isUppercase
-                        if l == "â" || l == "ê" || l == "ô" {
-                            let baseChar: Character = (l == "â") ? "a" : ((l == "ê") ? "e" : "o")
-                            letters[i] = u ? Character(String(baseChar).uppercased()) : baseChar
+                    // First check for "uo" / "ươ" diphthong pair in word
+                    var uoIndex: Int? = nil
+                    if letters.count >= 2 {
+                        for i in 0..<(letters.count - 1) {
+                            let c1 = Character(String(letters[i]).lowercased())
+                            let c2 = Character(String(letters[i + 1]).lowercased())
+                            let isU = (c1 == "u" || c1 == "ư")
+                            let isO = (c2 == "o" || c2 == "ô" || c2 == "ơ")
+                            if isU && isO {
+                                uoIndex = i
+                                break
+                            }
+                        }
+                    }
+                    
+                    if let idx = uoIndex {
+                        let c1 = Character(String(letters[idx]).lowercased())
+                        let c2 = Character(String(letters[idx + 1]).lowercased())
+                        let u1 = letters[idx].isUppercase
+                        let u2 = letters[idx + 1].isUppercase
+                        
+                        if c1 == "u" && c2 == "ô" {
+                            // Undo toggle: "uô" -> "uo" + 6
+                            letters[idx] = u1 ? "U" : "u"
+                            letters[idx + 1] = u2 ? "O" : "o"
                             letters.append(char)
-                            handled = true
-                            break
-                        } else if l == "a" || l == "e" || l == "o" {
-                            if l == "a" { letters[i] = u ? "Â" : "â" }
-                            else if l == "e" { letters[i] = u ? "Ê" : "ê" }
-                            else if l == "o" { letters[i] = u ? "Ô" : "ô" }
-                            handled = true
-                            break
+                        } else {
+                            // Transform pair into "uô" (e.g. uo -> uô, ươ -> uô, ưo -> uô, uơ -> uô)
+                            letters[idx] = u1 ? "U" : "u"
+                            letters[idx + 1] = u2 ? "Ô" : "ô"
+                        }
+                        handled = true
+                    } else {
+                        // Single vowel: check backward for a, e, o, â, ê, ô, ă, ơ
+                        for i in stride(from: letters.count - 1, through: 0, by: -1) {
+                            let l = Character(String(letters[i]).lowercased())
+                            let u = letters[i].isUppercase
+                            if l == "â" || l == "ê" || l == "ô" {
+                                let baseChar: Character = (l == "â") ? "a" : ((l == "ê") ? "e" : "o")
+                                letters[i] = u ? Character(String(baseChar).uppercased()) : baseChar
+                                letters.append(char)
+                                handled = true
+                                break
+                            } else if l == "a" || l == "e" || l == "o" || l == "ă" || l == "ơ" {
+                                if l == "a" || l == "ă" { letters[i] = u ? "Â" : "â" }
+                                else if l == "e" { letters[i] = u ? "Ê" : "ê" }
+                                else if l == "o" || l == "ơ" { letters[i] = u ? "Ô" : "ô" }
+                                handled = true
+                                break
+                            }
                         }
                     }
                 case "7": // Ơ, Ư
@@ -372,7 +596,9 @@ public final class VietnameseEngine {
                         for i in 0..<(letters.count - 1) {
                             let c1 = Character(String(letters[i]).lowercased())
                             let c2 = Character(String(letters[i + 1]).lowercased())
-                            if (c1 == "u" && c2 == "o") || (c1 == "ư" && c2 == "ơ") {
+                            let isU = (c1 == "u" || c1 == "ư")
+                            let isO = (c2 == "o" || c2 == "ô" || c2 == "ơ")
+                            if isU && isO {
                                 uoIndex = i
                                 break
                             }
@@ -381,21 +607,22 @@ public final class VietnameseEngine {
                     
                     if let idx = uoIndex {
                         let c1 = Character(String(letters[idx]).lowercased())
+                        let c2 = Character(String(letters[idx + 1]).lowercased())
                         let u1 = letters[idx].isUppercase
                         let u2 = letters[idx + 1].isUppercase
-                        if c1 == "ư" {
+                        if c1 == "ư" && c2 == "ơ" {
                             // Undo "ươ" -> "uo" + 7
                             letters[idx] = u1 ? "U" : "u"
                             letters[idx + 1] = u2 ? "O" : "o"
                             letters.append(char)
                         } else {
-                            // Transform "uo" -> "ươ"
+                            // Transform pair into "ươ" (e.g. uo -> ươ, uô -> ươ, ưo -> ươ, uơ -> ươ)
                             letters[idx] = u1 ? "Ư" : "ư"
                             letters[idx + 1] = u2 ? "Ơ" : "ơ"
                         }
                         handled = true
                     } else {
-                        // Single vowel: check backward for u or o
+                        // Single vowel: check backward for u, o, or ô
                         for i in stride(from: letters.count - 1, through: 0, by: -1) {
                             let l = Character(String(letters[i]).lowercased())
                             let u = letters[i].isUppercase
@@ -405,8 +632,8 @@ public final class VietnameseEngine {
                                 letters.append(char)
                                 handled = true
                                 break
-                            } else if l == "o" || l == "u" {
-                                letters[i] = (l == "o") ? (u ? "Ơ" : "ơ") : (u ? "Ư" : "ư")
+                            } else if l == "o" || l == "u" || l == "ô" {
+                                letters[i] = (l == "u") ? (u ? "Ư" : "ư") : (u ? "Ơ" : "ơ")
                                 handled = true
                                 break
                             }
@@ -421,7 +648,7 @@ public final class VietnameseEngine {
                             letters.append(char)
                             handled = true
                             break
-                        } else if l == "a" {
+                        } else if l == "a" || l == "â" {
                             letters[i] = u ? "Ă" : "ă"
                             handled = true
                             break

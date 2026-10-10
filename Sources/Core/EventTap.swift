@@ -186,7 +186,7 @@ public final class EventTapManager {
         let flags = event.flags
         
         // 6. Keypad (NumPad) -> Always pure numbers, never apply Vietnamese tones, reset buffer
-        if KeyCodes.isKeypadKey(keyCode) {
+        if flags.contains(.maskNumericPad) || KeyCodes.isKeypadKey(keyCode) {
             engine.reset()
             return Unmanaged.passRetained(event)
         }

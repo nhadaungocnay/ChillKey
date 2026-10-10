@@ -6,7 +6,9 @@ cd "$DIR"
 
 echo "🧪 Running ChillKey Unit Tests..."
 
+mkdir -p /tmp/clang-cache
 swiftc -O \
+    -module-cache-path /tmp/clang-cache \
     -vfsoverlay "$DIR/vfs.json" \
     -target arm64-apple-macos14.0 \
     Sources/Engine/*.swift \

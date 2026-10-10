@@ -115,6 +115,70 @@ public struct EngineTestRunner {
         assertTransform("d99", expected: "d9", method: .vni)
         assertTransform("toan11", expected: "toan1", method: .vni)
         
+        // --- 8. VNI Diphthong & Vowel Switching (uô <-> ươ, etc.) ---
+        assertTransform("cuop67", expected: "cươp", method: .vni)
+        assertTransform("cuop657", expected: "cượp", method: .vni)
+        assertTransform("cuop617", expected: "cướp", method: .vni)
+        assertTransform("cuoc67", expected: "cươc", method: .vni)
+        assertTransform("tuong67", expected: "tương", method: .vni)
+        assertTransform("tuong76", expected: "tuông", method: .vni)
+        assertTransform("tu7o7ng", expected: "tương", method: .vni)
+        assertTransform("co67", expected: "cơ", method: .vni)
+        assertTransform("co76", expected: "cô", method: .vni)
+        assertTransform("ca86", expected: "câ", method: .vni)
+        assertTransform("ca68", expected: "că", method: .vni)
+        
+        // Telex uô + w -> ươ
+        assertTransform("cuoopw", expected: "cươp", method: .telex)
+        assertTransform("coow", expected: "cơ", method: .telex)
+        assertTransform("caaw", expected: "că", method: .telex)
+        
+        // --- 9. Backspace Synchronization Tests ---
+        // VNI: cuộp -> backspace -> cuộ -> type c -> cuộc
+        let vniEngine = VietnameseEngine(inputMethod: .vni)
+        for ch in "cuop65" { _ = vniEngine.processCharacter(ch) }
+        assert(vniEngine.currentDisplay == "cuộp", "Expected 'cuộp', got '\(vniEngine.currentDisplay)'")
+        vniEngine.handleBackspace()
+        assert(vniEngine.currentDisplay == "cuộ", "Expected 'cuộ', got '\(vniEngine.currentDisplay)'")
+        _ = vniEngine.processCharacter("c")
+        if vniEngine.currentDisplay == "cuộc" {
+            passed += 1
+            print("  ✅ [PASS] Backspace sync (VNI): 'cuộp' - BS + 'c' -> '\(vniEngine.currentDisplay)'")
+        } else {
+            failed += 1
+            print("  ❌ [FAIL] Backspace sync (VNI): Expected 'cuộc', got '\(vniEngine.currentDisplay)'")
+        }
+        
+        // Telex: cuộp -> backspace -> cuộ -> type c -> cuộc
+        let telexEngine = VietnameseEngine(inputMethod: .telex)
+        for ch in "cuoojp" { _ = telexEngine.processCharacter(ch) }
+        assert(telexEngine.currentDisplay == "cuộp", "Expected 'cuộp', got '\(telexEngine.currentDisplay)'")
+        telexEngine.handleBackspace()
+        assert(telexEngine.currentDisplay == "cuộ", "Expected 'cuộ', got '\(telexEngine.currentDisplay)'")
+        _ = telexEngine.processCharacter("c")
+        if telexEngine.currentDisplay == "cuộc" {
+            passed += 1
+            print("  ✅ [PASS] Backspace sync (Telex): 'cuộp' - BS + 'c' -> '\(telexEngine.currentDisplay)'")
+        } else {
+            failed += 1
+            print("  ❌ [FAIL] Backspace sync (Telex): Expected 'cuộc', got '\(telexEngine.currentDisplay)'")
+        }
+        
+        // VNI: buoc71 (bước) -> backspace 'c' (bướ) -> type 'm' -> bướm
+        let vniEngine2 = VietnameseEngine(inputMethod: .vni)
+        for ch in "buoc71" { _ = vniEngine2.processCharacter(ch) }
+        assert(vniEngine2.currentDisplay == "bước", "Expected 'bước', got '\(vniEngine2.currentDisplay)'")
+        vniEngine2.handleBackspace() // deletes 'c' -> 'bướ'
+        assert(vniEngine2.currentDisplay == "bướ", "Expected 'bướ', got '\(vniEngine2.currentDisplay)'")
+        _ = vniEngine2.processCharacter("m")
+        if vniEngine2.currentDisplay == "bướm" {
+            passed += 1
+            print("  ✅ [PASS] Backspace sync (VNI): 'bước' - BS + 'm' -> '\(vniEngine2.currentDisplay)'")
+        } else {
+            failed += 1
+            print("  ❌ [FAIL] Backspace sync (VNI): Expected 'bướm', got '\(vniEngine2.currentDisplay)'")
+        }
+        
         print("\n===============================")
         print("🎯 Test Summary: \(passed) Passed, \(failed) Failed")
         print("===============================\n")
