@@ -287,40 +287,162 @@ public final class VietnameseEngine {
         
         for char in rawWord {
             if char.isNumber {
+                let hasVowel = letters.contains(where: { Alphabet.isVowel($0) })
+                let hasD = letters.contains(where: { $0 == "d" || $0 == "D" || $0 == "đ" || $0 == "Đ" })
                 var handled = false
+                
                 switch char {
-                case "1": currentTone = .acute; handled = true
-                case "2": currentTone = .grave; handled = true
-                case "3": currentTone = .hook; handled = true
-                case "4": currentTone = .tilde; handled = true
-                case "5": currentTone = .dot; handled = true
-                case "0": currentTone = .none; handled = true
-                case "6": // Â, Ê, Ô (can modify earlier vowels in word, e.g. viet6 -> viêt)
+                case "1":
+                    if hasVowel {
+                        if currentTone == .acute {
+                            currentTone = .none
+                            letters.append(char)
+                        } else {
+                            currentTone = .acute
+                        }
+                        handled = true
+                    }
+                case "2":
+                    if hasVowel {
+                        if currentTone == .grave {
+                            currentTone = .none
+                            letters.append(char)
+                        } else {
+                            currentTone = .grave
+                        }
+                        handled = true
+                    }
+                case "3":
+                    if hasVowel {
+                        if currentTone == .hook {
+                            currentTone = .none
+                            letters.append(char)
+                        } else {
+                            currentTone = .hook
+                        }
+                        handled = true
+                    }
+                case "4":
+                    if hasVowel {
+                        if currentTone == .tilde {
+                            currentTone = .none
+                            letters.append(char)
+                        } else {
+                            currentTone = .tilde
+                        }
+                        handled = true
+                    }
+                case "5":
+                    if hasVowel {
+                        if currentTone == .dot {
+                            currentTone = .none
+                            letters.append(char)
+                        } else {
+                            currentTone = .dot
+                        }
+                        handled = true
+                    }
+                case "0":
+                    if currentTone != .none {
+                        currentTone = .none
+                        handled = true
+                    }
+                case "6": // Â, Ê, Ô
                     for i in stride(from: letters.count - 1, through: 0, by: -1) {
                         let l = Character(String(letters[i]).lowercased())
                         let u = letters[i].isUppercase
-                        if l == "a" { letters[i] = u ? "Â" : "â"; handled = true; break }
-                        if l == "e" { letters[i] = u ? "Ê" : "ê"; handled = true; break }
-                        if l == "o" { letters[i] = u ? "Ô" : "ô"; handled = true; break }
+                        if l == "â" || l == "ê" || l == "ô" {
+                            let baseChar: Character = (l == "â") ? "a" : ((l == "ê") ? "e" : "o")
+                            letters[i] = u ? Character(String(baseChar).uppercased()) : baseChar
+                            letters.append(char)
+                            handled = true
+                            break
+                        } else if l == "a" || l == "e" || l == "o" {
+                            if l == "a" { letters[i] = u ? "Â" : "â" }
+                            else if l == "e" { letters[i] = u ? "Ê" : "ê" }
+                            else if l == "o" { letters[i] = u ? "Ô" : "ô" }
+                            handled = true
+                            break
+                        }
                     }
                 case "7": // Ơ, Ư
-                    for i in stride(from: letters.count - 1, through: 0, by: -1) {
-                        let l = Character(String(letters[i]).lowercased())
-                        let u = letters[i].isUppercase
-                        if l == "o" { letters[i] = u ? "Ơ" : "ơ"; handled = true; break }
-                        if l == "u" { letters[i] = u ? "Ư" : "ư"; handled = true; break }
+                    // First check for "uo" / "ươ" pair in word
+                    var uoIndex: Int? = nil
+                    if letters.count >= 2 {
+                        for i in 0..<(letters.count - 1) {
+                            let c1 = Character(String(letters[i]).lowercased())
+                            let c2 = Character(String(letters[i + 1]).lowercased())
+                            if (c1 == "u" && c2 == "o") || (c1 == "ư" && c2 == "ơ") {
+                                uoIndex = i
+                                break
+                            }
+                        }
+                    }
+                    
+                    if let idx = uoIndex {
+                        let c1 = Character(String(letters[idx]).lowercased())
+                        let u1 = letters[idx].isUppercase
+                        let u2 = letters[idx + 1].isUppercase
+                        if c1 == "ư" {
+                            // Undo "ươ" -> "uo" + 7
+                            letters[idx] = u1 ? "U" : "u"
+                            letters[idx + 1] = u2 ? "O" : "o"
+                            letters.append(char)
+                        } else {
+                            // Transform "uo" -> "ươ"
+                            letters[idx] = u1 ? "Ư" : "ư"
+                            letters[idx + 1] = u2 ? "Ơ" : "ơ"
+                        }
+                        handled = true
+                    } else {
+                        // Single vowel: check backward for u or o
+                        for i in stride(from: letters.count - 1, through: 0, by: -1) {
+                            let l = Character(String(letters[i]).lowercased())
+                            let u = letters[i].isUppercase
+                            if l == "ơ" || l == "ư" {
+                                let baseChar: Character = (l == "ơ") ? "o" : "u"
+                                letters[i] = u ? Character(String(baseChar).uppercased()) : baseChar
+                                letters.append(char)
+                                handled = true
+                                break
+                            } else if l == "o" || l == "u" {
+                                letters[i] = (l == "o") ? (u ? "Ơ" : "ơ") : (u ? "Ư" : "ư")
+                                handled = true
+                                break
+                            }
+                        }
                     }
                 case "8": // Ă
                     for i in stride(from: letters.count - 1, through: 0, by: -1) {
                         let l = Character(String(letters[i]).lowercased())
                         let u = letters[i].isUppercase
-                        if l == "a" { letters[i] = u ? "Ă" : "ă"; handled = true; break }
+                        if l == "ă" {
+                            letters[i] = u ? "A" : "a"
+                            letters.append(char)
+                            handled = true
+                            break
+                        } else if l == "a" {
+                            letters[i] = u ? "Ă" : "ă"
+                            handled = true
+                            break
+                        }
                     }
                 case "9": // Đ
-                    for i in stride(from: letters.count - 1, through: 0, by: -1) {
-                        let l = Character(String(letters[i]).lowercased())
-                        let u = letters[i].isUppercase
-                        if l == "d" { letters[i] = u ? "Đ" : "đ"; handled = true; break }
+                    if hasD {
+                        for i in stride(from: letters.count - 1, through: 0, by: -1) {
+                            let l = Character(String(letters[i]).lowercased())
+                            let u = letters[i].isUppercase
+                            if l == "đ" {
+                                letters[i] = u ? "D" : "d"
+                                letters.append(char)
+                                handled = true
+                                break
+                            } else if l == "d" {
+                                letters[i] = u ? "Đ" : "đ"
+                                handled = true
+                                break
+                            }
+                        }
                     }
                 default: break
                 }

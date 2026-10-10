@@ -24,10 +24,36 @@ public struct KeyCodes {
     public static let kVK_Home: UInt16 = 0x73
     public static let kVK_End: UInt16 = 0x77
     
+    // Numeric Keypad (NumPad) keycodes
+    public static let keypadKeyCodes: Set<UInt16> = [
+        0x52, // Keypad 0
+        0x53, // Keypad 1
+        0x54, // Keypad 2
+        0x55, // Keypad 3
+        0x56, // Keypad 4
+        0x57, // Keypad 5
+        0x58, // Keypad 6
+        0x59, // Keypad 7
+        0x5B, // Keypad 8
+        0x5C, // Keypad 9
+        0x41, // Keypad Decimal .
+        0x43, // Keypad Multiply *
+        0x45, // Keypad Plus +
+        0x47, // Keypad Clear
+        0x4B, // Keypad Divide /
+        0x4C, // Keypad Enter
+        0x4E, // Keypad Minus -
+        0x51  // Keypad Equals =
+    ]
+    
     public static func isNavigationKey(_ keyCode: UInt16) -> Bool {
         return keyCode == kVK_LeftArrow || keyCode == kVK_RightArrow ||
                keyCode == kVK_UpArrow || keyCode == kVK_DownArrow ||
                keyCode == kVK_PageUp || keyCode == kVK_PageDown ||
                keyCode == kVK_Home || keyCode == kVK_End
+    }
+    
+    public static func isKeypadKey(_ keyCode: UInt16) -> Bool {
+        return keypadKeyCodes.contains(keyCode)
     }
 }

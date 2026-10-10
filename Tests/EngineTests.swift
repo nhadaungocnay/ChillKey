@@ -84,6 +84,13 @@ public struct EngineTestRunner {
         assertTransform("ddd", expected: "dd") // dd -> đ + d -> dd
         
         // --- 7. VNI Tests ---
+        // Pure numbers without base letters must remain numbers
+        assertTransform("1", expected: "1", method: .vni)
+        assertTransform("2", expected: "2", method: .vni)
+        assertTransform("12345", expected: "12345", method: .vni)
+        assertTransform("67890", expected: "67890", method: .vni)
+        
+        // VNI transformations
         assertTransform("a6", expected: "â", method: .vni)
         assertTransform("e6", expected: "ê", method: .vni)
         assertTransform("o6", expected: "ô", method: .vni)
@@ -93,6 +100,20 @@ public struct EngineTestRunner {
         assertTransform("d9", expected: "đ", method: .vni)
         assertTransform("viet65", expected: "việt", method: .vni)
         assertTransform("hoa2", expected: "hòa", method: .vni, style: .modern)
+        
+        // VNI uo + 7 -> ươ
+        assertTransform("tuong7", expected: "tương", method: .vni)
+        assertTransform("tuong72", expected: "tường", method: .vni)
+        assertTransform("duong97", expected: "đương", method: .vni)
+        assertTransform("d9uong72", expected: "đường", method: .vni)
+        assertTransform("muon7", expected: "mươn", method: .vni)
+        assertTransform("muon75", expected: "mượn", method: .vni)
+        assertTransform("buoc71", expected: "bước", method: .vni)
+        
+        // VNI undo / toggle
+        assertTransform("tuong77", expected: "tuong7", method: .vni)
+        assertTransform("d99", expected: "d9", method: .vni)
+        assertTransform("toan11", expected: "toan1", method: .vni)
         
         print("\n===============================")
         print("🎯 Test Summary: \(passed) Passed, \(failed) Failed")

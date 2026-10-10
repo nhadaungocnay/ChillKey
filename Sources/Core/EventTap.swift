@@ -185,7 +185,13 @@ public final class EventTapManager {
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         let flags = event.flags
         
-        // 6. Modifiers (Cmd, Ctrl, Option) -> Shortcut key (Cmd+C, Cmd+V, etc.) -> Flush buffer
+        // 6. Keypad (NumPad) -> Always pure numbers, never apply Vietnamese tones, reset buffer
+        if KeyCodes.isKeypadKey(keyCode) {
+            engine.reset()
+            return Unmanaged.passRetained(event)
+        }
+        
+        // 7. Modifiers (Cmd, Ctrl, Option) -> Shortcut key (Cmd+C, Cmd+V, etc.) -> Flush buffer
         if flags.contains(.maskCommand) || flags.contains(.maskControl) || flags.contains(.maskAlternate) {
             engine.reset()
             return Unmanaged.passRetained(event)
