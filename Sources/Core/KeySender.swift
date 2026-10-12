@@ -4,7 +4,7 @@ import CoreGraphics
 public struct KeySender {
     public static let chillKeyMagicUserData: Int64 = 0x4368696C6C4B6579 // "ChillKey" in ASCII
     
-    private static let eventSource = CGEventSource(stateID: .hidSystemState)
+    private static let eventSource = CGEventSource(stateID: .combinedSessionState)
     
     /// Sends a given number of simulated backspace keystrokes synchronously.
     public static func sendBackspaces(count: Int) {
@@ -19,8 +19,8 @@ public struct KeySender {
                 keyDown.setIntegerValueField(.eventSourceUserData, value: chillKeyMagicUserData)
                 keyUp.setIntegerValueField(.eventSourceUserData, value: chillKeyMagicUserData)
                 
-                keyDown.post(tap: .cghidEventTap)
-                keyUp.post(tap: .cghidEventTap)
+                keyDown.post(tap: .cgSessionEventTap)
+                keyUp.post(tap: .cgSessionEventTap)
             }
         }
     }
@@ -42,8 +42,8 @@ public struct KeySender {
             keyDown.keyboardSetUnicodeString(stringLength: utf16Chars.count, unicodeString: &utf16Chars)
             keyUp.keyboardSetUnicodeString(stringLength: utf16Chars.count, unicodeString: &utf16Chars)
             
-            keyDown.post(tap: .cghidEventTap)
-            keyUp.post(tap: .cghidEventTap)
+            keyDown.post(tap: .cgSessionEventTap)
+            keyUp.post(tap: .cgSessionEventTap)
         }
     }
     
