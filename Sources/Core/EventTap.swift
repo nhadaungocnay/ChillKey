@@ -221,24 +221,32 @@ public final class EventTapManager {
             return Unmanaged.passRetained(event)
         }
         
-        // 10. Extract Unicode character from event
+        // 10. Extract Unicode character from event (with fallback for remote desktop synthetic events)
+        var firstChar: Character? = nil
         var length = 0
         event.keyboardGetUnicodeString(maxStringLength: 0, actualStringLength: &length, unicodeString: nil)
-        guard length > 0 else {
-            return Unmanaged.passRetained(event)
+        if length > 0 {
+            var chars = [UniChar](repeating: 0, count: length)
+            event.keyboardGetUnicodeString(maxStringLength: length, actualStringLength: &length, unicodeString: &chars)
+            let typedString = String(utf16CodeUnits: chars, count: length)
+            if typedString.count == 1 {
+                firstChar = typedString.first
+            }
         }
         
-        var chars = [UniChar](repeating: 0, count: length)
-        event.keyboardGetUnicodeString(maxStringLength: length, actualStringLength: &length, unicodeString: &chars)
-        let typedString = String(utf16CodeUnits: chars, count: length)
+        // Fallback for synthetic events without Unicode string (e.g. Chrome Remote Desktop Host, VNC)
+        if firstChar == nil {
+            let isUpper = flags.contains(.maskShift) != flags.contains(.maskAlphaShift)
+            firstChar = KeyCodes.character(for: keyCode, isUppercase: isUpper)
+        }
         
-        guard let firstChar = typedString.first, typedString.count == 1 else {
+        guard let charToProcess = firstChar else {
             engine.reset()
             return Unmanaged.passRetained(event)
         }
         
         // 11. Process character in Vietnamese Engine
-        let result = engine.processCharacter(firstChar)
+        let result = engine.processCharacter(charToProcess)
         
         if result.consumed {
             // Check if there is an active text selection (e.g. browser Omnibox autocomplete suggestion)

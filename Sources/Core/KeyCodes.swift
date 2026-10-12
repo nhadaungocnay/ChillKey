@@ -56,4 +56,24 @@ public struct KeyCodes {
     public static func isKeypadKey(_ keyCode: UInt16) -> Bool {
         return keypadKeyCodes.contains(keyCode)
     }
+    
+    // Fallback key code to character mapping for synthetic events (e.g. Chrome Remote Desktop, VNC)
+    private static let ansiMap: [UInt16: (lower: Character, upper: Character)] = [
+        0x00: ("a", "A"), 0x01: ("s", "S"), 0x02: ("d", "D"), 0x03: ("f", "F"),
+        0x04: ("h", "H"), 0x05: ("g", "G"), 0x06: ("z", "Z"), 0x07: ("x", "X"),
+        0x08: ("c", "C"), 0x09: ("v", "V"), 0x0B: ("b", "B"), 0x0C: ("q", "Q"),
+        0x0D: ("w", "W"), 0x0E: ("e", "E"), 0x0F: ("r", "R"), 0x10: ("y", "Y"),
+        0x11: ("t", "T"), 0x1F: ("o", "O"), 0x20: ("u", "U"), 0x22: ("i", "I"),
+        0x23: ("p", "P"), 0x25: ("l", "L"), 0x26: ("j", "J"), 0x28: ("k", "K"),
+        0x2D: ("n", "N"), 0x2E: ("m", "M"),
+        // Number row
+        0x12: ("1", "!"), 0x13: ("2", "@"), 0x14: ("3", "#"), 0x15: ("4", "$"),
+        0x17: ("5", "%"), 0x16: ("6", "^"), 0x1A: ("7", "&"), 0x1C: ("8", "*"),
+        0x19: ("9", "("), 0x1D: ("0", ")")
+    ]
+    
+    public static func character(for keyCode: UInt16, isUppercase: Bool) -> Character? {
+        guard let pair = ansiMap[keyCode] else { return nil }
+        return isUppercase ? pair.upper : pair.lower
+    }
 }
