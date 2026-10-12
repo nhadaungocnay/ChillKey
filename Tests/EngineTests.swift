@@ -127,6 +127,9 @@ public struct EngineTestRunner {
         assertTransform("co76", expected: "cô", method: .vni)
         assertTransform("ca86", expected: "câ", method: .vni)
         assertTransform("ca68", expected: "că", method: .vni)
+        assertTransform("van6", expected: "vân", method: .vni)
+        assertTransform("chu7a", expected: "chưa", method: .vni)
+        assertTransform("duoc97", expected: "đươc", method: .vni)
         
         // Telex uô + w -> ươ
         assertTransform("cuoopw", expected: "cươp", method: .telex)
