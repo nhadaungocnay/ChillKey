@@ -185,6 +185,23 @@ public struct EngineTestRunner {
         assertTransform("buu7", expected: "bưu", method: .vni)
         assertTransform("uu77", expected: "uu7", method: .vni) // undo
         
+        // iu tests (tone on 'i': chịu, dịu, líu, rìu - never chiụ, diụ, liú, riù)
+        assertTransform("chiuj", expected: "chịu", method: .telex)
+        assertTransform("chius", expected: "chíu", method: .telex)
+        assertTransform("chiuf", expected: "chìu", method: .telex)
+        assertTransform("chiur", expected: "chỉu", method: .telex)
+        assertTransform("chiux", expected: "chĩu", method: .telex)
+        assertTransform("diuj", expected: "dịu", method: .telex)
+        assertTransform("lius", expected: "líu", method: .telex)
+        assertTransform("riuf", expected: "rìu", method: .telex)
+        
+        assertTransform("chiu5", expected: "chịu", method: .vni)
+        assertTransform("chiu1", expected: "chíu", method: .vni)
+        assertTransform("chiu2", expected: "chìu", method: .vni)
+        assertTransform("diu5", expected: "dịu", method: .vni)
+        assertTransform("liu1", expected: "líu", method: .vni)
+        assertTransform("riu2", expected: "rìu", method: .vni)
+        
         // --- 9. Backspace Synchronization Tests ---
         // VNI: cuộp -> backspace -> cuộ -> type c -> cuộc
         let vniEngine = VietnameseEngine(inputMethod: .vni)
@@ -259,6 +276,46 @@ public struct EngineTestRunner {
         } else {
             failed += 1
             print("  ❌ [FAIL] Backspace sync (Telex): Expected 'cứu', got '\(telexEngine3.currentDisplay)'")
+        }
+        
+        // Initial consonants s, x, r in Telex (must not be eaten as tone keys)
+        assertTransform("sao", expected: "sao", method: .telex)
+        assertTransform("saos", expected: "sáo", method: .telex)
+        assertTransform("xa", expected: "xa", method: .telex)
+        assertTransform("xas", expected: "xá", method: .telex)
+        assertTransform("ra", expected: "ra", method: .telex)
+        assertTransform("ras", expected: "rá", method: .telex)
+        assertTransform("rar", expected: "rả", method: .telex)
+        assertTransform("ruoongj", expected: "ruộng", method: .telex)
+        
+        // VNI: chiu5 (chịu) -> backspace 'u' (chị) -> type 'u' -> chịu
+        let vniEngine4 = VietnameseEngine(inputMethod: .vni)
+        for ch in "chiu5" { _ = vniEngine4.processCharacter(ch) }
+        assert(vniEngine4.currentDisplay == "chịu", "Expected 'chịu', got '\(vniEngine4.currentDisplay)'")
+        vniEngine4.handleBackspace()
+        assert(vniEngine4.currentDisplay == "chị", "Expected 'chị', got '\(vniEngine4.currentDisplay)'")
+        _ = vniEngine4.processCharacter("u")
+        if vniEngine4.currentDisplay == "chịu" {
+            passed += 1
+            print("  ✅ [PASS] Backspace sync (VNI): 'chịu' - BS + 'u' -> '\(vniEngine4.currentDisplay)'")
+        } else {
+            failed += 1
+            print("  ❌ [FAIL] Backspace sync (VNI): Expected 'chịu', got '\(vniEngine4.currentDisplay)'")
+        }
+        
+        // Telex: chiuj (chịu) -> backspace 'u' (chị) -> type 'u' -> chịu
+        let telexEngine4 = VietnameseEngine(inputMethod: .telex)
+        for ch in "chiuj" { _ = telexEngine4.processCharacter(ch) }
+        assert(telexEngine4.currentDisplay == "chịu", "Expected 'chịu', got '\(telexEngine4.currentDisplay)'")
+        telexEngine4.handleBackspace()
+        assert(telexEngine4.currentDisplay == "chị", "Expected 'chị', got '\(telexEngine4.currentDisplay)'")
+        _ = telexEngine4.processCharacter("u")
+        if telexEngine4.currentDisplay == "chịu" {
+            passed += 1
+            print("  ✅ [PASS] Backspace sync (Telex): 'chịu' - BS + 'u' -> '\(telexEngine4.currentDisplay)'")
+        } else {
+            failed += 1
+            print("  ❌ [FAIL] Backspace sync (Telex): Expected 'chịu', got '\(telexEngine4.currentDisplay)'")
         }
         
         print("\n===============================")

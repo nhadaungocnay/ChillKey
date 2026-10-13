@@ -65,9 +65,9 @@ public struct ToneRules {
             // Traditional: "hoà", "hoè", "thuý" -> second vowel (on 'a'/'e'/'y')
             return style == .modern ? effectiveVowels[0] : effectiveVowels[1]
             
-        case "ai", "ao", "au", "ay", "âu", "ây", "eo", "êu", "oi", "ôi", "ơi", "ui", "ưi", "ưu":
+        case "ai", "ao", "au", "ay", "âu", "ây", "eo", "êu", "iu", "oi", "ôi", "ơi", "ui", "ưi", "ưu":
             // Semi-vowel ending: tone on the first vowel
-            // "mái", "báo", "sáu", "mấy", "mèo", "nếu", "tối", "gửi", "cứu"
+            // "mái", "báo", "sáu", "mấy", "mèo", "nếu", "chịu", "tối", "gửi", "cứu"
             return effectiveVowels[0]
             
         default:

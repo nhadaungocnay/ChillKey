@@ -286,8 +286,10 @@ public final class VietnameseEngine {
         for char in rawWord {
             let lower = Character(String(char).lowercased())
             
-            // Check tone key in Telex: s, f, r, x, j, z
-            if isTelexToneKey(lower) {
+            let hasVowels = letters.contains { Alphabet.isVowel($0) }
+            
+            // Check tone key in Telex: s, f, r, x, j, z (only applicable if word has vowels)
+            if hasVowels && isTelexToneKey(lower) {
                 let tone = telexTone(from: lower)
                 if lower == "z" {
                     // Remove tone
