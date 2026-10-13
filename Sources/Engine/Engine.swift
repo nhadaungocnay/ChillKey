@@ -320,9 +320,10 @@ public final class VietnameseEngine {
                 continue
             }
             
-            // Check double horn: uo / uô + w -> ươ (MUST check before single vowel + w)
+            // Check double horn: uo / uô + w -> ươ, or uu + w -> ưu (MUST check before single vowel + w)
             if lower == "w" && letters.count >= 2 {
                 var uoIndex: Int? = nil
+                var uuIndex: Int? = nil
                 for i in stride(from: letters.count - 2, through: 0, by: -1) {
                     let c1 = Character(String(letters[i]).lowercased())
                     let c2 = Character(String(letters[i + 1]).lowercased())
@@ -330,6 +331,11 @@ public final class VietnameseEngine {
                     let isO = (c2 == "o" || c2 == "ô" || c2 == "ơ")
                     if isU && isO {
                         uoIndex = i
+                        break
+                    }
+                    let isU2 = (c2 == "u" || c2 == "ư")
+                    if isU && isU2 {
+                        uuIndex = i
                         break
                     }
                 }
@@ -351,6 +357,23 @@ public final class VietnameseEngine {
                         letters[idx + 1] = u2 ? "Ơ" : "ơ"
                     }
                     continue
+                } else if let idx = uuIndex {
+                    let c1 = Character(String(letters[idx]).lowercased())
+                    let c2 = Character(String(letters[idx + 1]).lowercased())
+                    let u1 = letters[idx].isUppercase
+                    let u2 = letters[idx + 1].isUppercase
+                    
+                    if c1 == "ư" && c2 == "u" {
+                        // Undo toggle: ưu + w -> uu + w
+                        letters[idx] = u1 ? "U" : "u"
+                        letters[idx + 1] = u2 ? "U" : "u"
+                        letters.append(char)
+                    } else {
+                        // Transform pair into ưu (e.g. uu -> ưu, uư -> ưu)
+                        letters[idx] = u1 ? "Ư" : "ư"
+                        letters[idx + 1] = u2 ? "U" : "u"
+                    }
+                    continue
                 }
             }
             
@@ -364,6 +387,7 @@ public final class VietnameseEngine {
             letters.append(char)
         }
         
+        fixInvalidDiphthongs(&letters)
         var word = String(letters)
         
         // Apply tone mark if present
@@ -590,8 +614,9 @@ public final class VietnameseEngine {
                         }
                     }
                 case "7": // Ơ, Ư
-                    // First check for "uo" / "ươ" pair in word
+                    // First check for "uo" / "ươ" pair or "uu" / "ưu" pair in word
                     var uoIndex: Int? = nil
+                    var uuIndex: Int? = nil
                     if letters.count >= 2 {
                         for i in 0..<(letters.count - 1) {
                             let c1 = Character(String(letters[i]).lowercased())
@@ -600,6 +625,11 @@ public final class VietnameseEngine {
                             let isO = (c2 == "o" || c2 == "ô" || c2 == "ơ")
                             if isU && isO {
                                 uoIndex = i
+                                break
+                            }
+                            let isU2 = (c2 == "u" || c2 == "ư")
+                            if isU && isU2 {
+                                uuIndex = i
                                 break
                             }
                         }
@@ -619,6 +649,22 @@ public final class VietnameseEngine {
                             // Transform pair into "ươ" (e.g. uo -> ươ, uô -> ươ, ưo -> ươ, uơ -> ươ)
                             letters[idx] = u1 ? "Ư" : "ư"
                             letters[idx + 1] = u2 ? "Ơ" : "ơ"
+                        }
+                        handled = true
+                    } else if let idx = uuIndex {
+                        let c1 = Character(String(letters[idx]).lowercased())
+                        let c2 = Character(String(letters[idx + 1]).lowercased())
+                        let u1 = letters[idx].isUppercase
+                        let u2 = letters[idx + 1].isUppercase
+                        if c1 == "ư" && c2 == "u" {
+                            // Undo "ưu" -> "uu" + 7
+                            letters[idx] = u1 ? "U" : "u"
+                            letters[idx + 1] = u2 ? "U" : "u"
+                            letters.append(char)
+                        } else {
+                            // Transform pair into "ưu" (e.g. uu -> ưu, uư -> ưu, ưư -> ưu)
+                            letters[idx] = u1 ? "Ư" : "ư"
+                            letters[idx + 1] = u2 ? "U" : "u"
                         }
                         handled = true
                     } else {
@@ -681,11 +727,27 @@ public final class VietnameseEngine {
             letters.append(char)
         }
         
+        fixInvalidDiphthongs(&letters)
         var word = String(letters)
         if currentTone != .none {
             word = applyTone(to: word, tone: currentTone)
         }
         return word
+    }
+    
+    private func fixInvalidDiphthongs(_ letters: inout [Character]) {
+        guard letters.count >= 2 else { return }
+        for i in 0..<(letters.count - 1) {
+            let c1 = Character(String(letters[i]).lowercased())
+            let c2 = Character(String(letters[i + 1]).lowercased())
+            if c1 == "u" && c2 == "ư" {
+                // "uư" is never valid in Vietnamese, auto-correct to "ưu"
+                let u1 = letters[i].isUppercase
+                let u2 = letters[i + 1].isUppercase
+                letters[i] = u1 ? "Ư" : "ư"
+                letters[i + 1] = u2 ? "U" : "u"
+            }
+        }
     }
     
     // MARK: - Apply Tone
