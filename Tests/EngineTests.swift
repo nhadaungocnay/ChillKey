@@ -67,6 +67,22 @@ public struct EngineTestRunner {
         assertTransform("khuyeens", expected: "khuyến")
         assertTransform("hoaasp", expected: "hoấp")
         
+        // gi and qu tone placement in Telex
+        assertTransform("giaf", expected: "già")
+        assertTransform("gias", expected: "giá")
+        assertTransform("giar", expected: "giả")
+        assertTransform("giax", expected: "giã")
+        assertTransform("giaj", expected: "giạ")
+        assertTransform("gif", expected: "gì")
+        assertTransform("gis", expected: "gí")
+        assertTransform("ginf", expected: "gìn")
+        assertTransform("quas", expected: "quá")
+        assertTransform("quaf", expected: "quà")
+        assertTransform("quar", expected: "quả")
+        assertTransform("quys", expected: "quý")
+        assertTransform("quyeenf", expected: "quyền")
+        assertTransform("quyeets", expected: "quyết")
+        
         // --- 4. Modern Tone Placement (hoa`, thuy') ---
         assertTransform("hoaf", expected: "hòa", style: .modern)
         assertTransform("thooir", expected: "thổi", style: .modern)
@@ -130,6 +146,22 @@ public struct EngineTestRunner {
         assertTransform("van6", expected: "vân", method: .vni)
         assertTransform("chu7a", expected: "chưa", method: .vni)
         assertTransform("duoc97", expected: "đươc", method: .vni)
+        
+        // gi and qu tone placement in VNI
+        assertTransform("gia2", expected: "già", method: .vni)
+        assertTransform("gia1", expected: "giá", method: .vni)
+        assertTransform("gia3", expected: "giả", method: .vni)
+        assertTransform("gia4", expected: "giã", method: .vni)
+        assertTransform("gia5", expected: "giạ", method: .vni)
+        assertTransform("gi2", expected: "gì", method: .vni)
+        assertTransform("gi1", expected: "gí", method: .vni)
+        assertTransform("gin2", expected: "gìn", method: .vni)
+        assertTransform("qua1", expected: "quá", method: .vni)
+        assertTransform("qua2", expected: "quà", method: .vni)
+        assertTransform("qua3", expected: "quả", method: .vni)
+        assertTransform("quy1", expected: "quý", method: .vni)
+        assertTransform("quyen62", expected: "quyền", method: .vni)
+        assertTransform("quyet61", expected: "quyết", method: .vni)
         
         // Telex uô + w -> ươ
         assertTransform("cuoopw", expected: "cươp", method: .telex)
