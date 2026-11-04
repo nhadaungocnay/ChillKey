@@ -12,6 +12,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let trusted = PermissionManager.isAccessibilityTrusted()
         if !trusted {
             PermissionManager.requestAccessibility(prompt: true)
+            // Monitor permission in background; automatically relaunch app when user grants permission
+            PermissionManager.startAutoRelaunchOnPermissionGranted()
+            
             // Open settings window to let user see status
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 MenuBarController.shared.openSettings()

@@ -74,6 +74,7 @@ public struct SettingsView: View {
                                     .foregroundColor(.orange)
                                 Button("Cấp quyền") {
                                     PermissionManager.openAccessibilitySettings()
+                                    PermissionManager.startAutoRelaunchOnPermissionGranted()
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .controlSize(.small)
