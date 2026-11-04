@@ -76,6 +76,7 @@ public final class EventTapManager {
         
         // Listen to keyboard AND mouse events (to reset buffer on click)
         let eventMask = (1 << CGEventType.keyDown.rawValue) |
+                        (1 << CGEventType.keyUp.rawValue) |
                         (1 << CGEventType.flagsChanged.rawValue) |
                         (1 << CGEventType.leftMouseDown.rawValue) |
                         (1 << CGEventType.rightMouseDown.rawValue) |
@@ -144,8 +145,19 @@ public final class EventTapManager {
             return Unmanaged.passRetained(event)
         }
         
-        // 2. Ignore self-generated synthetic events to prevent recursion
+        // 2. Ignore self-generated synthetic events to prevent recursion,
+        // and ensure their process ID is rewritten to Chrome Remote Desktop host PID
+        // so CRD does not falsely detect them as local input and lock out remote control.
         if KeySender.isSelfGenerated(event: event) {
+            let crdPid = RemoteDesktopDetector.getChromeRemoteDesktopHostPid()
+            if crdPid > 0 {
+                event.setIntegerValueField(.eventSourceUnixProcessID, value: Int64(crdPid))
+            }
+            return Unmanaged.passRetained(event)
+        }
+        
+        // Pass keyUp events through without processing
+        if type == .keyUp {
             return Unmanaged.passRetained(event)
         }
         

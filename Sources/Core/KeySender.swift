@@ -9,6 +9,7 @@ public struct KeySender {
     /// Sends a given number of simulated backspace keystrokes synchronously.
     public static func sendBackspaces(count: Int) {
         guard count > 0 else { return }
+        let crdPid = RemoteDesktopDetector.getChromeRemoteDesktopHostPid()
         
         for _ in 0..<count {
             if let keyDown = CGEvent(keyboardEventSource: eventSource, virtualKey: KeyCodes.kVK_Delete, keyDown: true),
@@ -19,6 +20,11 @@ public struct KeySender {
                 keyDown.setIntegerValueField(.eventSourceUserData, value: chillKeyMagicUserData)
                 keyUp.setIntegerValueField(.eventSourceUserData, value: chillKeyMagicUserData)
                 
+                if crdPid > 0 {
+                    keyDown.setIntegerValueField(.eventSourceUnixProcessID, value: Int64(crdPid))
+                    keyUp.setIntegerValueField(.eventSourceUnixProcessID, value: Int64(crdPid))
+                }
+                
                 keyDown.post(tap: .cgSessionEventTap)
                 keyUp.post(tap: .cgSessionEventTap)
             }
@@ -28,6 +34,7 @@ public struct KeySender {
     /// Sends a Unicode string into the active application synchronously.
     public static func sendString(_ text: String) {
         guard !text.isEmpty else { return }
+        let crdPid = RemoteDesktopDetector.getChromeRemoteDesktopHostPid()
         
         var utf16Chars = Array(text.utf16)
         
@@ -38,6 +45,11 @@ public struct KeySender {
             keyUp.flags = []
             keyDown.setIntegerValueField(.eventSourceUserData, value: chillKeyMagicUserData)
             keyUp.setIntegerValueField(.eventSourceUserData, value: chillKeyMagicUserData)
+            
+            if crdPid > 0 {
+                keyDown.setIntegerValueField(.eventSourceUnixProcessID, value: Int64(crdPid))
+                keyUp.setIntegerValueField(.eventSourceUnixProcessID, value: Int64(crdPid))
+            }
             
             keyDown.keyboardSetUnicodeString(stringLength: utf16Chars.count, unicodeString: &utf16Chars)
             keyUp.keyboardSetUnicodeString(stringLength: utf16Chars.count, unicodeString: &utf16Chars)
