@@ -1,10 +1,41 @@
 import Foundation
 import CoreGraphics
+import AppKit
+
+// Private C function from CoreGraphics to post events directly to target process PID
+private typealias CGEventPostToPidFunction = @convention(c) (pid_t, CGEvent) -> Void
+
+private let postToPidFunc: CGEventPostToPidFunction? = {
+    let rtl = dlopen(nil, RTLD_LAZY)
+    if let sym = dlsym(rtl, "CGEventPostToPid") {
+        return unsafeBitCast(sym, to: CGEventPostToPidFunction.self)
+    }
+    return nil
+}()
 
 public struct KeySender {
     public static let chillKeyMagicUserData: Int64 = 0x4368696C6C4B6579 // "ChillKey" in ASCII
     
     private static let eventSource = CGEventSource(stateID: .combinedSessionState)
+    
+    /// Dispatches an event directly to the frontmost application process ID when available,
+    /// or falls back to posting on the global session event tap.
+    ///
+    /// By delivering synthetic events (backspaces & replacement characters) directly
+    /// to the frontmost app's event queue via `CGEventPostToPid`:
+    /// 1. Chrome Remote Desktop's global session tap (`LocalKeyboardInputMonitor`) never sees
+    ///    these events, completely eliminating the 2.0s lockout freeze even when the user
+    ///    disconnects and reconnects their remote session multiple times!
+    /// 2. Event delivery latency is near 0ms since it routes directly to the active application.
+    private static func postEvent(_ event: CGEvent) {
+        if let frontApp = NSWorkspace.shared.frontmostApplication,
+           frontApp.processIdentifier > 0,
+           let postToPid = postToPidFunc {
+            postToPid(frontApp.processIdentifier, event)
+        } else {
+            event.post(tap: .cgSessionEventTap)
+        }
+    }
     
     /// Sends a given number of simulated backspace keystrokes synchronously.
     public static func sendBackspaces(count: Int) {
@@ -25,8 +56,8 @@ public struct KeySender {
                     keyUp.setIntegerValueField(.eventSourceUnixProcessID, value: Int64(crdPid))
                 }
                 
-                keyDown.post(tap: .cgSessionEventTap)
-                keyUp.post(tap: .cgSessionEventTap)
+                postEvent(keyDown)
+                postEvent(keyUp)
             }
         }
     }
@@ -54,8 +85,8 @@ public struct KeySender {
             keyDown.keyboardSetUnicodeString(stringLength: utf16Chars.count, unicodeString: &utf16Chars)
             keyUp.keyboardSetUnicodeString(stringLength: utf16Chars.count, unicodeString: &utf16Chars)
             
-            keyDown.post(tap: .cgSessionEventTap)
-            keyUp.post(tap: .cgSessionEventTap)
+            postEvent(keyDown)
+            postEvent(keyUp)
         }
     }
     
