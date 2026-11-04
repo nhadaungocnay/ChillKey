@@ -1,31 +1,30 @@
 import Foundation
-import Combine
 
-public final class AppState: ObservableObject {
+public final class AppState {
     public static let shared = AppState()
     
-    @Published public var isVietnamese: Bool {
+    public var isVietnamese: Bool {
         didSet {
             UserDefaults.standard.set(isVietnamese, forKey: "isVietnamese")
             EventTapManager.shared.isEnabled = isVietnamese
         }
     }
     
-    @Published public var inputMethod: InputMethod {
+    public var inputMethod: InputMethod {
         didSet {
             UserDefaults.standard.set(inputMethod.rawValue, forKey: "inputMethod")
             EventTapManager.shared.engine.inputMethod = inputMethod
         }
     }
     
-    @Published public var tonePlacementStyle: TonePlacementStyle {
+    public var tonePlacementStyle: TonePlacementStyle {
         didSet {
             UserDefaults.standard.set(tonePlacementStyle.rawValue, forKey: "tonePlacementStyle")
             EventTapManager.shared.engine.tonePlacementStyle = tonePlacementStyle
         }
     }
     
-    @Published public var hasAccessibilityPermission: Bool = false
+    public var hasAccessibilityPermission: Bool = false
     
     private init() {
         self.isVietnamese = UserDefaults.standard.object(forKey: "isVietnamese") as? Bool ?? true

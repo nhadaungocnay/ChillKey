@@ -21,7 +21,6 @@ swiftc -O \
     -vfsoverlay "$DIR/vfs.json" \
     -target arm64-apple-macos14.0 \
     -framework AppKit \
-    -framework SwiftUI \
     -framework ApplicationServices \
     -framework CoreGraphics \
     Sources/Engine/*.swift \

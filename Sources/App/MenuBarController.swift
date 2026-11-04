@@ -1,11 +1,9 @@
 import AppKit
-import SwiftUI
 
 public final class MenuBarController: NSObject {
     public static let shared = MenuBarController()
     
     private var statusItem: NSStatusItem?
-    private var settingsWindow: NSWindow?
     
     override private init() {
         super.init()
@@ -114,22 +112,7 @@ public final class MenuBarController: NSObject {
     }
     
     @objc public func openSettings() {
-        if let window = settingsWindow {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-        
-        let hostingController = NSHostingController(rootView: SettingsView())
-        let window = NSWindow(contentViewController: hostingController)
-        window.title = "Cài đặt ChillKey"
-        window.styleMask = [.titled, .closable, .miniaturizable]
-        window.center()
-        window.isReleasedWhenClosed = false
-        self.settingsWindow = window
-        
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        SettingsWindowController.shared.showSettingsWindow()
     }
     
     @objc private func quitApp() {
